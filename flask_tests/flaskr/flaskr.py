@@ -1,11 +1,14 @@
-import sqlite3
+import pymysql.cursors
 
 from flask import Flask, request, session, g, redirect, url_for, \
 	abort, render_template, flash
 from contextlib import closing
 
 #config
-DATABASE = '/tmp/flaskr.db'
+DATABASE = 'flaskr'
+DB_HOST = 'devdbhost'
+DB_USER = 'lamar'
+DB_PASS = 'the333'
 DEBUG = True
 SECRET_KEY = 'dev_key'
 USERNAME = 'admin'
@@ -17,7 +20,13 @@ app.config.from_object(__name__)
 
 # db connector function
 def connect_db():
-    return sqlite3.connect(app.config['DATABASE'])
+    return pymysql.connect(host=app.config['DB_HOST'], 
+                           user=app.config['DB_USER'],
+                           password=app.config['DB_PASS'],
+                           db=app.config['DATABASE'],
+                           charset='utf8mb4',
+                           cursorclass=pymysql.cursors.DictCursor)
+
 
 # removed for moving to mariadb
 # db init function
@@ -40,16 +49,19 @@ def teardown_request(exception):
 # routes
 @app.route('/')
 def show_entries():
-    cur = g.db.execute('select id, title, text from entries order by id desc')
-    entries = [dict(id=row[0], title=row[1], text=row[2]) for row in cur.fetchall()]
+    cur = g.db.cursor()
+    sql = 'select id, title, text from entries order by id desc'
+    cur.execute(sql)
+    entries = [dict(id=row['id'], title=row['title'], text=row['text']) for row in cur.fetchall()]
     return render_template('show_entries.html', entries=entries)
 
 @app.route('/add', methods=['POST'])
 def add_entry():
     if not session.get('logged_in'):
         abort(401)
-    g.db.execute('insert into entries (title, text) values (?, ?)', \
-        [request.form['title'], request.form['text']])
+    cur = g.db.cursor()
+    cur.execute('insert into entries (title, text) values (%s, %s)', \
+        (request.form['title'], request.form['text']))
     g.db.commit()
     flash('New entry was posted')
     return redirect(url_for('show_entries'))
@@ -78,7 +90,8 @@ def logout():
 def delete_entry():
     if not session.get('logged_in'):
         abort(401)
-    g.db.execute('delete from entries where id=?', request.args.get('id', ''))
+    cur = g.db.cursor()
+    cur.execute('delete from entries where id=%s', request.args.get('id', ''))
     g.db.commit()
     flash('entry deleted')
     return redirect(url_for('show_entries'))
