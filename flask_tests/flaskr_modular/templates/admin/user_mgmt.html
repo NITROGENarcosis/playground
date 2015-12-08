@@ -13,7 +13,7 @@
         <hr>
         <ul class=user-list>
         {% for user in users %}
-            <li>{{ user.username }} <a href="{{ url_for('admin.delete_user')}}?=id={{ user.id }}">remove</a>
+            <li>{{ user.username }} <a href="{{ url_for('admin.delete_user', user_id=user.id)}}">remove</a>
         {% endfor %}
         </ul>
     {% endif %}

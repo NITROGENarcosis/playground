@@ -57,10 +57,24 @@ def user_mgmt():
     print( users )
     return render_template('admin/user_mgmt.html', users=users)
 
-@admin.route('/adduser')
+@admin.route('/adduser', methods=['POST'])
 def add_user():
-    return redirect(url_for('home.show_entries'))
+    if not session.get('logged_in'):
+        abort(401)
+    cur = g.db.cursor()
+    sql = 'insert into `login` (`username`, `password`) values (%s, %s)'
+    cur.execute( sql, (request.form['username'], request.form['password']))
+    g.db.commit()
+    flash('User ' + request.form['username'] + ' added')
+    return redirect(url_for('.user_mgmt'))
 
-@admin.route('/deluser')
-def delete_user():
-    return redirect(url_for('home.show_entries'))
+@admin.route('/deluser/<int:user_id>')
+def delete_user(user_id):
+    if not session.get('logged_in'):
+        abort(401)
+    cur = g.db.cursor()
+    sql = 'delete from `login` where `id` = %s'
+    cur.execute(sql, int(user_id))
+    g.db.commit()
+    flash('User removed')
+    return redirect(url_for('.user_mgmt'))
