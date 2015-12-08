@@ -70,10 +70,11 @@ def add_entry():
 def login():
     error = None
     if request.method == 'POST':
-        if request.form['username'] != app.config['USERNAME']:
-            error = 'bad user'
-        elif request.form['password'] != app.config['PASSWORD']:
-            error = 'bad pass'
+        cur = g.db.cursor()
+        sql = 'select `id` from `login` where `username` = %s and `password` = %s'
+        cur.execute(sql, (request.form['username'], request.form['password']))
+        if not cur.fetchall():
+            error = 'bad login'
         else:
             session['logged_in'] = True
             flash('login good')
